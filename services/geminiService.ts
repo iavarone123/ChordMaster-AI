@@ -1,8 +1,7 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
-import { Progression, ChordSlot, ChordData } from "../types";
+import { Progression, ChordSlot, FretValue } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export const generateProgression = async (mood: string, key: string = 'C', scale: string = 'Major'): Promise<Progression> => {
   const response = await ai.models.generateContent({
@@ -58,14 +57,14 @@ export const generateProgression = async (mood: string, key: string = 'C', scale
     }
   });
 
-  const data = JSON.parse(response.text);
+  const data = JSON.parse(response.text || '{}');
   
-  const sanitizedSlots = data.chordSlots.map((slot: any) => ({
+  const sanitizedSlots: ChordSlot[] = (data.chordSlots || []).map((slot: any) => ({
     name: slot.name,
-    voicings: slot.voicings.map((v: any) => ({
+    voicings: (slot.voicings || []).map((v: any) => ({
       ...v,
-      frets: v.frets.map((f: string) => f === 'x' ? 'x' : parseInt(f)),
-      fingers: v.fingers?.map((f: string) => f === 'null' || !f ? null : parseInt(f))
+      frets: v.frets.map((f: string): FretValue => f.toLowerCase() === 'x' ? 'x' : parseInt(f)),
+      fingers: v.fingers?.map((f: string) => (f === 'null' || !f || f === 'None') ? null : parseInt(f)) || null
     }))
   }));
 
@@ -73,8 +72,8 @@ export const generateProgression = async (mood: string, key: string = 'C', scale
     ...data,
     id: Math.random().toString(36).substr(2, 9),
     chordSlots: sanitizedSlots,
-    key: data.key,
-    mood: data.mood
+    key: data.key || key,
+    mood: data.mood || mood
   };
 };
 
@@ -111,13 +110,13 @@ export const fetchChordByName = async (chordName: string): Promise<ChordSlot> =>
     }
   });
 
-  const data = JSON.parse(response.text);
+  const data = JSON.parse(response.text || '{}');
   return {
-    name: data.name,
-    voicings: data.voicings.map((v: any) => ({
+    name: data.name || chordName,
+    voicings: (data.voicings || []).map((v: any) => ({
       ...v,
-      frets: v.frets.map((f: string) => f === 'x' ? 'x' : parseInt(f)),
-      fingers: v.fingers?.map((f: string) => f === 'null' || !f ? null : parseInt(f))
+      frets: v.frets.map((f: string): FretValue => f.toLowerCase() === 'x' ? 'x' : parseInt(f)),
+      fingers: v.fingers?.map((f: string) => (f === 'null' || !f || f === 'None') ? null : parseInt(f)) || null
     }))
   };
 };

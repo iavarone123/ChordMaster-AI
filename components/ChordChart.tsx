@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ChordData, FretValue } from '../types';
 
@@ -35,13 +34,13 @@ const ChordChart: React.FC<ChordChartProps> = ({ chord, size = 'md' }) => {
   const positionName = nameParts[1] || '';
 
   return (
-    <div className="flex flex-col items-center bg-slate-900/40 p-5 rounded-[2.5rem] border border-slate-800 hover:border-amber-500/50 transition-all duration-300 group/card shadow-xl hover:shadow-amber-500/10">
-      <div className="text-center mb-3 min-h-[40px] flex flex-col justify-center">
-        <h3 className="text-amber-500 font-black text-sm group-hover/card:scale-105 transition-transform truncate max-w-[110px]">
+    <div className="flex flex-col items-center bg-slate-900/40 p-5 rounded-[2.5rem] border border-slate-800 hover:border-amber-500/50 transition-all duration-300 group/card shadow-xl hover:shadow-amber-500/10 w-full max-w-[180px]">
+      <div className="text-center mb-3 min-h-[40px] flex flex-col justify-center w-full">
+        <h3 className="text-amber-500 font-black text-sm group-hover/card:scale-105 transition-transform truncate px-2">
           {baseName}
         </h3>
         {positionName && (
-          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter opacity-80">
+          <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter opacity-80 truncate px-2">
             {positionName}
           </p>
         )}
@@ -123,7 +122,7 @@ const ChordChart: React.FC<ChordChartProps> = ({ chord, size = 'md' }) => {
             <g key={`fret-dot-${i}`}>
                 <circle 
                     cx={margin.left + i * xStep} 
-                    cy={getFretY(fret)} 
+                    cy={getFretY(fret as number)} 
                     r={6.5 * scale} 
                     fill="#fbbf24" 
                     className="drop-shadow-[0_2px_4px_rgba(251,191,36,0.4)]"
@@ -131,7 +130,7 @@ const ChordChart: React.FC<ChordChartProps> = ({ chord, size = 'md' }) => {
                 {chord.fingers && chord.fingers[i] !== null && (
                     <text
                         x={margin.left + i * xStep} 
-                        y={getFretY(fret)} 
+                        y={getFretY(fret as number)} 
                         dy={3.5 * scale}
                         textAnchor="middle"
                         fill="#1e293b"
