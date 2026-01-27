@@ -5,10 +5,19 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   plugins: [react()],
   define: {
-    // This ensures process.env.API_KEY doesn't crash the browser
-    'process.env': process.env
+    // Specifically inject the API_KEY for the Gemini SDK
+    // This prevents 'process is not defined' errors in the browser
+    'process.env.API_KEY': JSON.stringify(process.env.API_KEY),
+    'process.env': {
+      API_KEY: process.env.API_KEY
+    }
   },
   build: {
-    target: 'esnext'
+    target: 'esnext',
+    outDir: 'dist',
+    sourcemap: false
+  },
+  server: {
+    port: 3000
   }
 });
