@@ -1,0 +1,5 @@
+{
+  "name": "ChordMaster AI",
+  "description": "A premium guitar chord and progression explorer powered by Gemini. Search chords, generate creative progressions, and visualize fingerings with high-fidelity chord charts.",
+  "requestFramePermissions": []
+}
