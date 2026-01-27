@@ -1,17 +1,29 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Progression, ChordSlot, FretValue } from "../types";
 
-// Helper to get AI instance safely
-const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Helper to get AI instance safely. Ensures the key is provided at call time.
+const getAI = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("Gemini API Key is missing. Please check your environment variables.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const generateProgression = async (mood: string, key: string = 'C', scale: string = 'Major'): Promise<Progression> => {
   const ai = getAI();
+  const prompt = `Generate a creative guitar chord progression.
+Key: ${key}
+Scale: ${scale}
+Mood: ${mood}
+Count: 4-6 chords
+
+For each chord, provide 3 variations: open/low, mid-neck, and high-neck.
+Return a valid JSON object matching the requested schema.`;
+
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Generate a guitar chord progression in the key of ${key} ${scale} scale with a ${mood} mood. Include 4-6 chords. 
-    IMPORTANT: For EVERY chord in the progression, provide 3 different voicing variations.
-    Give each voicing a descriptive name that explains the shape (e.g., "C Major - Open Position", "C Major - 3rd Fret Barre", "C Major - 8th Fret Triad").
-    Return the response in the specified JSON format.`,
+    contents: [{ parts: [{ text: prompt }] }],
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -40,8 +52,8 @@ export const generateProgression = async (mood: string, key: string = 'C', scale
                       },
                       baseFret: { type: Type.NUMBER },
                       fingers: {
-                          type: Type.ARRAY,
-                          items: { type: Type.STRING }
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING }
                       }
                     },
                     required: ["name", "frets"]
@@ -57,20 +69,24 @@ export const generateProgression = async (mood: string, key: string = 'C', scale
     }
   });
 
-  const data = JSON.parse(response.text || '{}');
+  const text = response.text;
+  if (!text) throw new Error("Empty response from AI");
+  
+  const data = JSON.parse(text);
   
   const sanitizedSlots: ChordSlot[] = (data.chordSlots || []).map((slot: any) => ({
     name: slot.name,
     voicings: (slot.voicings || []).map((v: any) => ({
-      ...v,
-      frets: v.frets.map((f: string): FretValue => {
-        const cleaned = String(f).toLowerCase();
-        return cleaned === 'x' ? 'x' : parseInt(cleaned);
+      name: v.name || slot.name,
+      frets: (v.frets || []).map((f: any): FretValue => {
+        const str = String(f).toLowerCase();
+        return str === 'x' ? 'x' : parseInt(str) || 0;
       }),
-      fingers: v.fingers?.map((f: string) => {
-        const cleaned = String(f).toLowerCase();
-        return (cleaned === 'null' || !cleaned || cleaned === 'none') ? null : parseInt(cleaned);
-      }) || null
+      fingers: v.fingers?.map((f: any) => {
+        const str = String(f).toLowerCase();
+        return (str === 'null' || str === 'none' || !str) ? null : parseInt(str);
+      }) || null,
+      baseFret: v.baseFret || 1
     }))
   }));
 
@@ -87,11 +103,7 @@ export const fetchChordByName = async (chordName: string): Promise<ChordSlot> =>
   const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Provide 3 distinct guitar chord voicings for: ${chordName}. 
-    1. A low position (open or nut)
-    2. A middle position (frets 3-7)
-    3. A high position (frets 8-12)
-    Give each voicing a descriptive name including its position.`,
+    contents: [{ parts: [{ text: `Provide 3 distinct guitar chord voicings for: ${chordName}. Position 1 (low), 2 (mid), 3 (high).` }] }],
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -117,19 +129,23 @@ export const fetchChordByName = async (chordName: string): Promise<ChordSlot> =>
     }
   });
 
-  const data = JSON.parse(response.text || '{}');
+  const text = response.text;
+  if (!text) throw new Error("Empty response from AI");
+  const data = JSON.parse(text);
+  
   return {
     name: data.name || chordName,
     voicings: (data.voicings || []).map((v: any) => ({
-      ...v,
-      frets: v.frets.map((f: string): FretValue => {
-        const cleaned = String(f).toLowerCase();
-        return cleaned === 'x' ? 'x' : parseInt(cleaned);
+      name: v.name || data.name || chordName,
+      frets: (v.frets || []).map((f: any): FretValue => {
+        const str = String(f).toLowerCase();
+        return str === 'x' ? 'x' : parseInt(str) || 0;
       }),
-      fingers: v.fingers?.map((f: string) => {
-        const cleaned = String(f).toLowerCase();
-        return (cleaned === 'null' || !cleaned || cleaned === 'none') ? null : parseInt(cleaned);
-      }) || null
+      fingers: v.fingers?.map((f: any) => {
+        const str = String(f).toLowerCase();
+        return (str === 'null' || str === 'none' || !str) ? null : parseInt(str);
+      }) || null,
+      baseFret: v.baseFret || 1
     }))
   };
 };

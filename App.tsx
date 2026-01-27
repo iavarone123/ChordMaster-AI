@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { COMMON_CHORDS, MOODS, KEYS, SCALES } from './constants';
 import { ChordData, Progression, AppSection, ChordSlot } from './types';
@@ -14,6 +13,7 @@ const App: React.FC = () => {
   
   const [currentProgression, setCurrentProgression] = useState<Progression | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [recentProgressions, setRecentProgressions] = useState<Progression[]>([]);
   const [selectedMood, setSelectedMood] = useState(MOODS[0]);
   const [selectedKey, setSelectedKey] = useState(KEYS[0]);
@@ -34,17 +34,18 @@ const App: React.FC = () => {
   const handleAiSearch = async () => {
     if (!searchQuery.trim()) return;
     setIsSearchingAi(true);
+    setError(null);
     setActiveSection(AppSection.Library);
     try {
       const slot = await fetchChordByName(searchQuery);
       setAiSearchResults(prev => {
         const next = [slot, ...prev.filter(s => s.name !== slot.name)].slice(0, 5);
-        // Reset/init indices for search results
         setAiVoicingIndices(new Array(next.length).fill(0));
         return next;
       });
-    } catch (error) {
-      console.error("AI Search failed", error);
+    } catch (err: any) {
+      console.error("AI Search failed", err);
+      setError(err.message || "Failed to find chord variations. Check API key.");
     } finally {
       setIsSearchingAi(false);
     }
@@ -52,13 +53,15 @@ const App: React.FC = () => {
 
   const handleGenerate = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const prog = await generateProgression(selectedMood, selectedKey, selectedScale);
       setCurrentProgression(prog);
       setRecentProgressions(prev => [prog, ...prev.slice(0, 4)]);
       setActiveSection(AppSection.Generator);
-    } catch (error) {
-      console.error("Generation failed", error);
+    } catch (err: any) {
+      console.error("Generation failed", err);
+      setError(err.message || "Failed to generate progression. Make sure your API key is correctly set in Vercel environment variables.");
     } finally {
       setIsLoading(false);
     }
@@ -193,17 +196,24 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                <button 
-                    disabled={isLoading}
-                    onClick={handleGenerate}
-                    className="mt-12 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 text-slate-950 font-black px-10 py-5 rounded-2xl flex items-center gap-4 transition-all active:scale-95 shadow-2xl shadow-amber-500/20"
-                >
-                    {isLoading ? (
-                        <><i className="fa-solid fa-spinner animate-spin"></i> Arranging...</>
-                    ) : (
-                        <><i className="fa-solid fa-wand-magic-sparkles"></i> Build Progression</>
+                <div className="mt-12 space-y-4">
+                    <button 
+                        disabled={isLoading}
+                        onClick={handleGenerate}
+                        className="bg-amber-500 hover:bg-amber-400 disabled:bg-slate-700 text-slate-950 font-black px-10 py-5 rounded-2xl flex items-center gap-4 transition-all active:scale-95 shadow-2xl shadow-amber-500/20"
+                    >
+                        {isLoading ? (
+                            <><i className="fa-solid fa-spinner animate-spin"></i> Arranging...</>
+                        ) : (
+                            <><i className="fa-solid fa-wand-magic-sparkles"></i> Build Progression</>
+                        )}
+                    </button>
+                    {error && (
+                        <p className="text-red-400 text-sm font-medium flex items-center gap-2 animate-pulse">
+                            <i className="fa-solid fa-circle-exclamation"></i> {error}
+                        </p>
                     )}
-                </button>
+                </div>
             </div>
         </section>
 
@@ -413,8 +423,11 @@ const App: React.FC = () => {
                   <button className="w-10 h-10 rounded-full text-slate-500 flex items-center justify-center hover:text-amber-500 transition-colors">
                       <i className="fa-solid fa-backward-step"></i>
                   </button>
-                  <button className="w-16 h-16 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center hover:scale-110 transition-all shadow-3xl shadow-amber-500/30 active:scale-90 ring-4 ring-amber-500/10">
-                      <i className="fa-solid fa-play ml-1 text-2xl"></i>
+                  <button 
+                    disabled={isLoading}
+                    onClick={() => { if (!isLoading) handleGenerate(); }}
+                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-3xl active:scale-90 ring-4 ring-amber-500/10 ${isLoading ? 'bg-slate-700 text-amber-500' : 'bg-amber-500 text-slate-950 hover:scale-110 shadow-amber-500/30'}`}>
+                      {isLoading ? <i className="fa-solid fa-spinner animate-spin text-2xl"></i> : <i className="fa-solid fa-play ml-1 text-2xl"></i>}
                   </button>
                   <button className="w-10 h-10 rounded-full text-slate-500 flex items-center justify-center hover:text-amber-500 transition-colors">
                       <i className="fa-solid fa-forward-step"></i>
