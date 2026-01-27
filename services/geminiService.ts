@@ -1,9 +1,11 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Progression, ChordSlot, FretValue } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Helper to get AI instance safely
+const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export const generateProgression = async (mood: string, key: string = 'C', scale: string = 'Major'): Promise<Progression> => {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Generate a guitar chord progression in the key of ${key} ${scale} scale with a ${mood} mood. Include 4-6 chords. 
@@ -31,17 +33,15 @@ export const generateProgression = async (mood: string, key: string = 'C', scale
                   items: {
                     type: Type.OBJECT,
                     properties: {
-                      name: { type: Type.STRING, description: "Detailed name including shape/position info" },
+                      name: { type: Type.STRING },
                       frets: {
                         type: Type.ARRAY,
-                        items: { type: Type.STRING },
-                        description: "6 items for [E, A, D, G, B, e]. Use numbers or 'x'."
+                        items: { type: Type.STRING }
                       },
                       baseFret: { type: Type.NUMBER },
                       fingers: {
                           type: Type.ARRAY,
-                          items: { type: Type.STRING },
-                          description: "Finger numbers 1-4 or null"
+                          items: { type: Type.STRING }
                       }
                     },
                     required: ["name", "frets"]
@@ -63,8 +63,14 @@ export const generateProgression = async (mood: string, key: string = 'C', scale
     name: slot.name,
     voicings: (slot.voicings || []).map((v: any) => ({
       ...v,
-      frets: v.frets.map((f: string): FretValue => f.toLowerCase() === 'x' ? 'x' : parseInt(f)),
-      fingers: v.fingers?.map((f: string) => (f === 'null' || !f || f === 'None') ? null : parseInt(f)) || null
+      frets: v.frets.map((f: string): FretValue => {
+        const cleaned = String(f).toLowerCase();
+        return cleaned === 'x' ? 'x' : parseInt(cleaned);
+      }),
+      fingers: v.fingers?.map((f: string) => {
+        const cleaned = String(f).toLowerCase();
+        return (cleaned === 'null' || !cleaned || cleaned === 'none') ? null : parseInt(cleaned);
+      }) || null
     }))
   }));
 
@@ -78,6 +84,7 @@ export const generateProgression = async (mood: string, key: string = 'C', scale
 };
 
 export const fetchChordByName = async (chordName: string): Promise<ChordSlot> => {
+  const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Provide 3 distinct guitar chord voicings for: ${chordName}. 
@@ -115,8 +122,14 @@ export const fetchChordByName = async (chordName: string): Promise<ChordSlot> =>
     name: data.name || chordName,
     voicings: (data.voicings || []).map((v: any) => ({
       ...v,
-      frets: v.frets.map((f: string): FretValue => f.toLowerCase() === 'x' ? 'x' : parseInt(f)),
-      fingers: v.fingers?.map((f: string) => (f === 'null' || !f || f === 'None') ? null : parseInt(f)) || null
+      frets: v.frets.map((f: string): FretValue => {
+        const cleaned = String(f).toLowerCase();
+        return cleaned === 'x' ? 'x' : parseInt(cleaned);
+      }),
+      fingers: v.fingers?.map((f: string) => {
+        const cleaned = String(f).toLowerCase();
+        return (cleaned === 'null' || !cleaned || cleaned === 'none') ? null : parseInt(cleaned);
+      }) || null
     }))
   };
 };

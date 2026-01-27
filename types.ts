@@ -1,9 +1,7 @@
-
 export type FretValue = number | 'x' | null;
 
 export interface ChordData {
   name: string;
-  freets?: FretValue[]; // Legacy support
   frets: FretValue[]; // [E, A, D, G, B, e]
   fingers?: (number | null)[];
   barre?: number;
