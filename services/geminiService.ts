@@ -1,17 +1,9 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Progression, ChordSlot, FretValue } from "../types";
 
-// Helper to get AI instance safely. Ensures the key is provided at call time.
-const getAI = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("Gemini API Key is missing. Please check your environment variables.");
-  }
-  return new GoogleGenAI({ apiKey });
-};
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export const generateProgression = async (mood: string, key: string = 'C', scale: string = 'Major'): Promise<Progression> => {
-  const ai = getAI();
   const prompt = `Generate a creative guitar chord progression.
 Key: ${key}
 Scale: ${scale}
@@ -70,7 +62,7 @@ Return a valid JSON object matching the requested schema.`;
   });
 
   const text = response.text;
-  if (!text) throw new Error("Empty response from AI");
+  if (!text) throw new Error("Empty response from AI service.");
   
   const data = JSON.parse(text);
   
@@ -100,7 +92,6 @@ Return a valid JSON object matching the requested schema.`;
 };
 
 export const fetchChordByName = async (chordName: string): Promise<ChordSlot> => {
-  const ai = getAI();
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: [{ parts: [{ text: `Provide 3 distinct guitar chord voicings for: ${chordName}. Position 1 (low), 2 (mid), 3 (high).` }] }],
@@ -130,7 +121,7 @@ export const fetchChordByName = async (chordName: string): Promise<ChordSlot> =>
   });
 
   const text = response.text;
-  if (!text) throw new Error("Empty response from AI");
+  if (!text) throw new Error("Empty response from AI service.");
   const data = JSON.parse(text);
   
   return {

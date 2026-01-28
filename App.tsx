@@ -45,7 +45,7 @@ const App: React.FC = () => {
       });
     } catch (err: any) {
       console.error("AI Search failed", err);
-      setError(err.message || "Failed to find chord variations. Check API key.");
+      setError("We couldn't reach the AI composer right now. Please try again in a moment.");
     } finally {
       setIsSearchingAi(false);
     }
@@ -61,7 +61,7 @@ const App: React.FC = () => {
       setActiveSection(AppSection.Generator);
     } catch (err: any) {
       console.error("Generation failed", err);
-      setError(err.message || "Failed to generate progression. Make sure your API key is correctly set in Vercel environment variables.");
+      setError("Something went wrong while arranging your progression. Please check your connection and try again.");
     } finally {
       setIsLoading(false);
     }
